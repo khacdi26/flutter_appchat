@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app_chat/auth/auth_service.dart';
+
+import '../pages/setting_page.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
+
+  void logout() {
+    final auth = AuthService();
+    auth.signOut();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,23 +39,33 @@ class CustomDrawer extends StatelessWidget {
                   },
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.only(left: 25.0),
+              Padding(
+                padding: const EdgeInsets.only(left: 25.0),
                 child: ListTile(
-                  title: Text("S E T T I N G S"),
-                  leading: Icon(Icons.settings),
+                  title: const Text("S E T T I N G S"),
+                  leading: const Icon(Icons.settings),
+                  onTap: () {
+                    Navigator.pop(context);
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const SettingPage()),
+                    );
+                  },
                 ),
               ),
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.only(
+          Padding(
+            padding: const EdgeInsets.only(
               left: 25.0,
               bottom: 25.0,
             ),
             child: ListTile(
-              title: Text("L O G O U T"),
-              leading: Icon(Icons.logout),
+              title: const Text("L O G O U T"),
+              leading: const Icon(Icons.logout),
+              onTap: logout,
             ),
           ),
         ],
