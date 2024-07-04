@@ -1,15 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_app_chat/models/message.dart';
 
 class ChatService {
-  //get instance of firestore
+  //get instance of firestore & auth
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   //get user stream
   /* 
   List<Map<String, dynamic>> = [
-  {
-    'email': test@gmail.com,    ->   String
-    'id': ...                   ->   dynamic
+  { string : dynamic
+    'email': test@gmail.com,    
+    'id': ...                  
   },
   {
     'email': ronaldo@gmail.com, 
@@ -26,7 +29,46 @@ class ChatService {
     });
   }
 
-  //send message
+  //send message (id nguoi nhan - tin nhan)
+  Future<void> sendMessage(String receiverID, message) async {
+    // get current user infor
+    final String currentUserID = _auth.currentUser!.uid;
+    final String currentUserEmail = _auth.currentUser!.email!;
+    final Timestamp timestamp = Timestamp.now();
+
+    // create a new message
+    Message newMessage = Message(
+      senderID: currentUserID,
+      senderEmail: currentUserEmail,
+      receiverID: receiverID,
+      message: message,
+      timestamp: timestamp,
+    );
+
+    //construct chat room ID for the two user (rút gọn để đảm bảo tính duy nhất)
+    List<String> ids = [currentUserID, receiverID];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    //add new message to database
+    await _firestore
+        .collection("chat_rooms")
+        .doc(chatRoomID)
+        .collection("messages")
+        .add(newMessage.toMap());
+  }
 
   //get message
+  Stream<QuerySnapshot> getMessages(String userID, ortherUserID) {
+    List<String> ids = [userID, ortherUserID];
+    ids.sort();
+    String chatRoomID = ids.join('_');
+
+    return _firestore
+        .collection("chat_rooms")
+        .doc(chatRoomID)
+        .collection("messages")
+        .orderBy("timeStamp", descending: false)
+        .snapshots();
+  }
 }
