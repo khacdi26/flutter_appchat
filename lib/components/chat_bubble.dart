@@ -23,7 +23,7 @@ class ChatBubble extends StatelessWidget {
         message,
         style: TextStyle(
           color: isCurrentUser
-              ? Theme.of(context).colorScheme.tertiary
+              ? Colors.white
               : Theme.of(context).colorScheme.inversePrimary,
         ),
       ),

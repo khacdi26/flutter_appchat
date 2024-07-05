@@ -26,7 +26,10 @@ class UserTitle extends StatelessWidget {
         child: Row(
           children: [
             //icon
-            const Icon(Icons.person),
+            const Padding(
+              padding: EdgeInsets.only(right: 20),
+              child: Icon(Icons.person),
+            ),
             //user name
             Text(text),
           ],
