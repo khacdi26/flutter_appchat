@@ -26,6 +26,7 @@ class _ChatPageState extends State<ChatPage> {
   // chat & aut services
   final ChatService _chatService = ChatService();
   final AuthService _authService = AuthService();
+  List<DocumentSnapshot> messagesList = [];
 
   // textfield focus
   FocusNode myFocusNode = FocusNode();
@@ -38,7 +39,7 @@ class _ChatPageState extends State<ChatPage> {
       () {
         if (myFocusNode.hasFocus) {
           Future.delayed(
-            const Duration(milliseconds: 500),
+            const Duration(milliseconds: 550),
             () => scrollDown(),
           );
         }
@@ -48,12 +49,15 @@ class _ChatPageState extends State<ChatPage> {
       const Duration(milliseconds: 500),
       () => scrollDown(),
     );
+    _loadMessages();
+    _scrollController.addListener(_scrollListener);
   }
 
   @override
   void dispose() {
     myFocusNode.dispose();
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -61,7 +65,7 @@ class _ChatPageState extends State<ChatPage> {
   final ScrollController _scrollController = ScrollController();
   void scrollDown() {
     _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
+      _scrollController.position.minScrollExtent,
       duration: const Duration(milliseconds: 500),
       curve: Curves.fastOutSlowIn,
     );
@@ -73,11 +77,12 @@ class _ChatPageState extends State<ChatPage> {
     if (_messageController.text.isNotEmpty) {
       //send message
       await _chatService.sendMessage(
-          widget.receiverID, _messageController.text);
+        widget.receiverID,
+        _messageController.text,
+      );
 
       //clear textfield
       _messageController.clear();
-
       //scrolldown
       scrollDown();
     }
@@ -108,26 +113,12 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildMessagesList() {
-    String senderID = _authService.getCurrentUser()!.uid;
-    return StreamBuilder(
-      stream: _chatService.getMessages(widget.receiverID, senderID),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Text("Error");
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Text("Loading...");
-        }
-
-        return ListView(
-          padding: const EdgeInsets.only(bottom: 25.0),
-          controller: _scrollController,
-          children: snapshot.data!.docs
-              .map((doc) => _buildMessagesItem(doc))
-              .toList(),
-        );
-      },
+    return ListView.builder(
+      reverse: true,
+      padding: const EdgeInsets.only(bottom: 25.0),
+      controller: _scrollController,
+      itemCount: messagesList.length,
+      itemBuilder: (context, index) => _buildMessagesItem(messagesList[index]),
     );
   }
 
@@ -192,4 +183,31 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void sendFile() {}
+  void _loadMoreMessages() {
+    String senderID = _authService.getCurrentUser()!.uid;
+    _chatService
+        .getMessages(widget.receiverID, senderID,
+            lastVisible: messagesList.last)
+        .listen((snapshot) {
+      setState(() {
+        messagesList.addAll(snapshot.docs);
+      });
+    });
+  }
+
+  void _loadMessages() {
+    String senderID = _authService.getCurrentUser()!.uid;
+    _chatService.getMessages(widget.receiverID, senderID).listen((snapshot) {
+      setState(() {
+        messagesList = (snapshot.docs);
+      });
+    });
+  }
+
+  void _scrollListener() {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      _loadMoreMessages();
+    }
+  }
 }
