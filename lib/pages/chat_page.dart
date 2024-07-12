@@ -75,6 +75,9 @@ class _ChatPageState extends State<ChatPage> {
   void sendMessage() async {
     //check empty textfield
     if (_messageController.text.isNotEmpty) {
+      setState(() {
+        _isSendingMessage = true;
+      });
       //send message
       await _chatService.sendMessage(
         widget.receiverID,
@@ -83,10 +86,15 @@ class _ChatPageState extends State<ChatPage> {
 
       //clear textfield
       _messageController.clear();
+      setState(() {
+        _isSendingMessage = false;
+      });
       //scrolldown
       scrollDown();
     }
   }
+
+  bool _isSendingMessage = false;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +155,7 @@ class _ChatPageState extends State<ChatPage> {
       child: Row(
         children: [
           IconButton(
-              onPressed: sendFile,
+              onPressed: _isSendingMessage ? null : sendFile,
               icon: const Icon(
                 Icons.image,
                 color: Colors.blue,
@@ -170,7 +178,7 @@ class _ChatPageState extends State<ChatPage> {
             ),
             margin: const EdgeInsets.only(right: 15.0),
             child: IconButton(
-              onPressed: sendMessage,
+              onPressed: _isSendingMessage ? null : sendMessage,
               icon: const Icon(
                 Icons.arrow_upward,
                 color: Colors.white,
