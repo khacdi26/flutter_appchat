@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_app_chat/models/message.dart';
 
 class ChatService {
@@ -30,7 +33,8 @@ class ChatService {
   }
 
   //send message (id nguoi nhan - tin nhan)
-  Future<void> sendMessage(String receiverID, message) async {
+  Future<void> sendMessage(String receiverID,
+      {String? message, List<String>? files}) async {
     // // get current user infor
     final String currentUserID = _auth.currentUser!.uid;
     final String currentUserEmail = _auth.currentUser!.email!;
@@ -42,6 +46,7 @@ class ChatService {
       senderEmail: currentUserEmail,
       receiverID: receiverID,
       message: message,
+      fileURLs: files,
       timestamp: timestamp,
     );
 
@@ -56,6 +61,25 @@ class ChatService {
         .doc(chatRoomID)
         .collection("messages")
         .add(newMessage.toMap());
+  }
+
+  Future<List<String>> uploadFiles(List<File> files) async {
+    List<String> fileURLs = [];
+
+    for (File file in files) {
+      try {
+        String fileName = file.path.split('/').last;
+        Reference firebaseStorageRef =
+            FirebaseStorage.instance.ref().child('uploads/$fileName');
+        await firebaseStorageRef.putFile(file);
+        String downloadURL = await firebaseStorageRef.getDownloadURL();
+        fileURLs.add(downloadURL);
+      } catch (e) {
+        rethrow;
+      }
+    }
+
+    return fileURLs;
   }
 
   // //get message

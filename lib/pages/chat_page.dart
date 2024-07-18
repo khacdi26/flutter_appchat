@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app_chat/components/chat_bubble.dart';
+import 'package:flutter_app_chat/components/custom_bottomsheet.dart';
 import 'package:flutter_app_chat/components/custom_textfield.dart';
+import 'package:flutter_app_chat/components/img_message.dart';
 import 'package:flutter_app_chat/services/auth/auth_service.dart';
 import 'package:flutter_app_chat/services/chat/chat_service.dart';
 
@@ -81,17 +83,16 @@ class _ChatPageState extends State<ChatPage> {
       //send message
       await _chatService.sendMessage(
         widget.receiverID,
-        _messageController.text,
+        message: _messageController.text,
       );
-
-      //clear textfield
-      _messageController.clear();
-      setState(() {
-        _isSendingMessage = false;
-      });
-      //scrolldown
-      scrollDown();
     }
+    //clear textfield
+    _messageController.clear();
+    setState(() {
+      _isSendingMessage = false;
+    });
+    //scrolldown
+    scrollDown();
   }
 
   bool _isSendingMessage = false;
@@ -114,7 +115,7 @@ class _ChatPageState extends State<ChatPage> {
           ),
 
           //user input
-          _bluidUserInput(context),
+          _buildUserInput(context),
         ],
       ),
     );
@@ -135,33 +136,52 @@ class _ChatPageState extends State<ChatPage> {
     // nếu tin nhắn của người gửi thì chuyển hết về bên phải
     bool isCurrentUser = data['senderID'] == _authService.getCurrentUser()!.uid;
 
-    var aligment = isCurrentUser ? Alignment.centerRight : Alignment.centerLeft;
+    var alignment =
+        isCurrentUser ? Alignment.centerRight : Alignment.centerLeft;
+
+    Widget messageWidget;
+
+    if (data["message"] != null) {
+      // Hiển thị tin nhắn
+      messageWidget =
+          ChatBubble(message: data["message"], isCurrentUser: isCurrentUser);
+    } else if (data["fileURLs"] != null &&
+        (data["fileURLs"] as List).isNotEmpty) {
+      // Hiển thị file URLs nếu tin nhắn là null và có URLs
+      List<String> fileURLs = List<String>.from(data["fileURLs"]);
+      messageWidget = ImageList(images: fileURLs);
+    } else {
+      // Trường hợp không có tin nhắn hoặc file URLs
+      messageWidget = const Text('No message or file URLs');
+    }
 
     return Container(
-      alignment: aligment,
-      child: Column(
-        crossAxisAlignment:
-            isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          ChatBubble(message: data["message"], isCurrentUser: isCurrentUser)
-        ],
-      ),
+      alignment: alignment,
+      child: messageWidget,
     );
   }
 
-  Widget _bluidUserInput(BuildContext context) {
+  Widget _buildUserInput(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 25.0),
       child: Row(
         children: [
           IconButton(
-              onPressed: _isSendingMessage ? null : sendFile,
-              icon: const Icon(
-                Icons.image,
-                color: Colors.blue,
-                size: 36.0,
-              )),
-          //text field
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                builder: (BuildContext context) {
+                  return CustomBottomsheet(receiverID: widget.receiverID);
+                },
+              );
+            },
+            icon: const Icon(
+              Icons.image,
+              color: Colors.blue,
+              size: 36.0,
+            ),
+          ),
+          // text field
           Expanded(
             child: CustomTextField(
               controller: _messageController,
@@ -170,7 +190,7 @@ class _ChatPageState extends State<ChatPage> {
               focusNode: myFocusNode,
             ),
           ),
-          //sen button
+          // send button
           Container(
             decoration: const BoxDecoration(
               color: Colors.blue,
@@ -184,13 +204,12 @@ class _ChatPageState extends State<ChatPage> {
                 color: Colors.white,
               ),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
-  void sendFile() {}
   void _loadMoreMessages() {
     String senderID = _authService.getCurrentUser()!.uid;
     _chatService
